@@ -1,17 +1,7 @@
-// const args = process.argv.slice(2, process.argv.length);
-// const fs = require("fs");
 const request = require("request");
-/**
- * Makes a single API request to retrieve the user's IP address.
- * Input:
- *   - A callback (to pass back an error or the IP string)
- * Returns (via Callback):
- *   - An error, if any (nullable)
- *   - The IP address as a string (null if error). Example: "162.245.144.188"
- */
+
 const jsonIPObject = "https://api.ipify.org/?format=json";
 const fetchMyIP = (IPcallback) => {
-  // use request to fetch IP address from JSON API
   request(jsonIPObject, (error, response, body) => {
     if (error) {
       IPcallback(error, null);
@@ -24,10 +14,8 @@ const fetchMyIP = (IPcallback) => {
       );
       return;
     }
-    // console.log(response, body);
     const ip = JSON.parse(body).ip;
-    // console.log(data.ip);
-    return ip; //might want to check with a mentor about this line.. used to be IPcallback(ip)
+    return IPcallback(null, ip);
   });
 };
 
@@ -49,8 +37,6 @@ const fetchCoordsByIP = (ip, coordsCallback) => {
     }
     const latitude = JSON.parse(body).latitude;
     const longitude = JSON.parse(body).longitude;
-    // console.log("latitude", latitude);
-    // console.log("ip", ip);
     coordsCallback(null, { latitude, longitude });
   });
 };
@@ -73,11 +59,33 @@ const fetchISSFlyOverTimes = (coords, flyoverCallback) => {
         return;
       }
       const nextPasses = JSON.parse(body).response;
-      // console.log("nextpasses", nextPasses);
-      // console.log("ip", ip);
       flyoverCallback(null, nextPasses);
     }
   );
 };
 
-module.exports = { fetchMyIP, fetchCoordsByIP, fetchISSFlyOverTimes };
+const nextISSTimesForMyLocation = (callback) => {
+  fetchMyIP((error, ip) => {
+    if (error) {
+      callback(error, null);
+      return;
+    }
+    fetchCoordsByIP(ip, (error, coords) => {
+      if (error) {
+        callback(error, null);
+        return;
+      }
+      fetchISSFlyOverTimes(coords, (error, nextPasses) => {
+        if (error) {
+          callback(error, null);
+          return;
+        }
+        return callback(null, nextPasses);
+      });
+    });
+  });
+};
+
+module.exports = {
+  nextISSTimesForMyLocation,
+};
